@@ -8,6 +8,7 @@ from typing import Any
 import numpy as np
 import pytest
 from inline_ext_demo.basic import Brightness, Invert
+from inline_ext_demo.gradient import Gradient
 from inline_ext_demo.upscale import Upscale
 
 
@@ -56,6 +57,6 @@ def test_the_entry_point_registers_exactly_what_the_manifest_declares() -> None:
     )
     declared = {node["type"] for node in manifest["nodes"]}
     implemented = {
-        cls.__inline_descriptor__.type for cls in (Invert, Brightness, Upscale)
+        cls.__inline_descriptor__.type for cls in (Gradient, Invert, Brightness, Upscale)
     }
     assert implemented == declared

@@ -9,8 +9,9 @@ from __future__ import annotations
 from inline_core.extensions.api import ExtensionRegistrar
 
 from .basic import Brightness, Invert
+from .gradient import Gradient
 from .upscale import Upscale
 
 
 def register(reg: ExtensionRegistrar) -> None:
-    reg.nodes(Invert, Brightness, Upscale)
+    reg.nodes(Gradient, Invert, Brightness, Upscale)

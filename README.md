@@ -3,11 +3,12 @@
 A reference extension for [Inline Studio](https://github.com/inline-studio/inline-studio). Copy this
 repo as the starting point for your own.
 
-It ships three nodes, each independently toggleable by the user:
+It ships four nodes, each independently toggleable by the user:
 
 | Node | Shows |
 | --- | --- |
-| `demo/invert` | The minimum: a decorated `NodeRunner` |
+| `demo/gradient` | A **runnable** node: Run control, take history, saved output |
+| `demo/invert` | The minimum: a decorated `NodeRunner` that transforms its input |
 | `demo/brightness` | A second node from the same entry point |
 | `demo/upscale` | Declaring weights + an `options_from` model picker (off by default) |
 
@@ -65,8 +66,34 @@ Declare every node in the manifest's `nodes` array. Users toggle nodes individua
 your code is imported once, switching one on never needs a restart. Give a node
 `"defaultEnabled": false` to ship it off by default.
 
-Set `output_kind=MediaKind.IMAGE` and `produces_takes = True` when your node should become a Frame
-with its own take history.
+## Making a node runnable
+
+A node only gets the **Run** control, a preview, and take history when it declares a media output.
+Without `output_kind` it is plumbing: it has no Run button and executes only when something
+downstream of it runs. That is why `demo/invert` has no Run control but `demo/gradient` does.
+
+```python
+@inline_node(
+    type="demo/gradient",
+    title="Gradient",
+    category="Generate",
+    output_kind=MediaKind.IMAGE,        # <- this is what puts Run on the node
+    outputs=(Port("image", "Image", PortKind.IMAGE),),
+    params=(ParamField("width", "Width", Widget.NUMBER, 512),),
+)
+class Gradient(NodeRunner):
+    produces_takes = True               # <- and this is what gives it take history
+
+    def run(self, node, inputs, ctx) -> NodeResult:
+        rgb = ...                        # a uint8 HxWx3 numpy array
+        take = ctx.takes.save(ctx.run_id, node.id, rgb, node.params)
+        return NodeResult(outputs={"image": rgb}, takes=[take])
+```
+
+`ctx.takes` is the take store. Guard it with `if ctx.takes is None` so your node still works when
+it is executed as part of someone else's graph rather than as a run target.
+
+See `python/inline_ext_demo/gradient.py` for the complete node.
 
 ## Dependencies
 

@@ -3,7 +3,7 @@
   "id": "demo",
   "name": "Inline Demo Extension",
   "version": "1.0.0",
-  "description": "A reference extension: three nodes, one with a declared model requirement.",
+  "description": "A reference extension: a generating node plus three image nodes.",
   "author": "Inline Studio",
   "homepage": "https://github.com/inline-studio/inline-extension-demo",
   "license": "MIT",
@@ -13,8 +13,15 @@
   "requirements": [],
   "entry": "inline_ext_demo:register",
   "nodes": [
-    { "type": "demo/invert" },
-    { "type": "demo/brightness" },
+    {
+      "type": "demo/gradient"
+    },
+    {
+      "type": "demo/invert"
+    },
+    {
+      "type": "demo/brightness"
+    },
     {
       "type": "demo/upscale",
       "defaultEnabled": false,
