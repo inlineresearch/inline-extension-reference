@@ -1,0 +1,1 @@
+"""Inline Studio demo extension."""

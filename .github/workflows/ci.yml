@@ -1,0 +1,33 @@
+name: ci
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Inline Core
+        run: pip install inline-core
+      - name: Test
+        run: |
+          pip install pytest
+          PYTHONPATH=python pytest -q
+      # The same scan that runs at install time, so a finding is caught before publishing.
+      - name: Security scan
+        run: |
+          python - <<'PY'
+          import sys
+          from pathlib import Path
+          from inline_core.extensions.manifest import load_manifest
+          from inline_core.extensions.scanner import scan
+
+          root = Path(".")
+          report = scan(root, load_manifest(root))
+          for f in report.findings:
+              print(f"{f.severity.value:8} {f.rule:28} {f.file}:{f.line} {f.message}")
+          if report.blocked:
+              sys.exit("blocked: this extension cannot be published as-is")
+          PY

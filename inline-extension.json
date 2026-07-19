@@ -1,0 +1,43 @@
+{
+  "schema": 1,
+  "id": "demo",
+  "name": "Inline Demo Extension",
+  "version": "1.0.0",
+  "description": "A reference extension: two sub-extensions, custom nodes, and a model requirement.",
+  "author": "Inline Studio",
+  "homepage": "https://github.com/inline-studio/inline-extension-demo",
+  "license": "MIT",
+  "coreCompat": ">=1.2,<2.0",
+  "pythonRequires": ">=3.11",
+  "isolation": "shared",
+  "requirements": [],
+  "subs": [
+    {
+      "id": "basic",
+      "title": "Basic Image Nodes",
+      "description": "Invert and adjust brightness. Pure numpy, no extra dependencies.",
+      "entry": "inline_ext_demo.basic:register",
+      "defaultEnabled": true,
+      "nodes": ["demo/invert", "demo/brightness"]
+    },
+    {
+      "id": "upscale",
+      "title": "Model Upscale",
+      "description": "Shows how a node declares the weights it needs. Off by default.",
+      "entry": "inline_ext_demo.upscale:register",
+      "defaultEnabled": false,
+      "nodes": ["demo/upscale"],
+      "models": [
+        {
+          "id": "realesrgan-x4",
+          "label": "Real-ESRGAN x4",
+          "category": "upscale_models",
+          "repo": "ai-forever/Real-ESRGAN",
+          "repoFile": "RealESRGAN_x4.pth",
+          "filename": "RealESRGAN_x4.pth",
+          "approxBytes": 67040989
+        }
+      ]
+    }
+  ]
+}
