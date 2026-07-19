@@ -14,7 +14,7 @@ It ships four nodes, each independently toggleable by the user:
 
 ## Install it
 
-Extensions → **Install from URL** → this repo's URL, tag `v1.0.0`.
+Extensions → **Install from URL** → this repo's URL, tag `v1.0.1`.
 
 ## Layout
 
@@ -146,7 +146,7 @@ Keep to the first two lists empty and users install without a warning.
 
 ## Publishing
 
-1. Tag a release (`v1.0.0`). Installs pin to the commit behind the tag, so moving it later doesn't
+1. Tag a release (`v1.0.1`). Installs pin to the commit behind the tag, so moving it later doesn't
    change what an existing user has.
 2. Open a PR against
    [inline-studio/extension-registry](https://github.com/inline-studio/extension-registry) adding

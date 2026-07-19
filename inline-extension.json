@@ -2,7 +2,7 @@
   "schema": 1,
   "id": "demo",
   "name": "Inline Demo Extension",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A reference extension: a generating node plus three image nodes.",
   "author": "Inline Studio",
   "homepage": "https://github.com/inline-studio/inline-extension-demo",
