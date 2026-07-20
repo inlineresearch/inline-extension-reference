@@ -5,7 +5,7 @@
   "version": "1.0.1",
   "description": "A reference extension: a generating node plus three image nodes.",
   "author": "Inline Studio",
-  "homepage": "https://github.com/inlineresearch/Inline-Extension-Reference",
+  "homepage": "https://github.com/inlineresearch/Inline-Studio-Extension-Guide",
   "license": "MIT",
   "coreCompat": ">=1.2,<2.0",
   "pythonRequires": ">=3.11",

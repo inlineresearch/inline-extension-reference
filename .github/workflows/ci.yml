@@ -2,10 +2,9 @@ name: ci
 on: [push, pull_request]
 
 env:
-  # Extension support (`inline_core.extensions`) is newer than the last PyPI release and is not
-  # yet in the Inline-Core subtree, so CI installs Core from the Inline-Studio branch that has
-  # it. Switch to `pip install inline-core` once a release ships with extension support.
-  CORE_SOURCE: "inline-core @ git+https://github.com/inlineresearch/Inline-Studio@community-extensions#subdirectory=core"
+  # Extension support landed in inline-core 1.2.1. Pinned to a floor rather than an exact version
+  # so an extension keeps building against newer Core releases.
+  CORE_SOURCE: "inline-core>=1.2.1"
 
 jobs:
   test:
