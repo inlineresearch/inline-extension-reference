@@ -49,9 +49,9 @@ def test_upscale_reports_a_missing_weight_file_clearly() -> None:
 
 
 def test_upscale_reads_an_image_from_an_asset_ref(tmp_path: Any) -> None:
-    """A wired frame or asset arrives as an AssetRef, not a numpy array - the node must load it. No
-    torch or weights needed, so this runs in CI."""
-    from PIL import Image
+    """A wired frame or asset arrives as an AssetRef, not a numpy array - the node must load it.
+    Needs Pillow (a Core runtime dep), so it skips on a bare install like CI."""
+    Image = pytest.importorskip("PIL.Image")
     from inline_core.takes import AssetRef
     from inline_ext_demo.upscale import _image_array
 
@@ -67,7 +67,7 @@ def test_upscale_runs_the_real_esrgan_from_an_asset_ref() -> None:
     """End-to-end through the node the way the canvas drives it: an AssetRef image input and the
     actual 4x-UltraSharp weights. Skips where the ML stack or the weight file is absent (e.g. CI)."""
     pytest.importorskip("torch")
-    from PIL import Image
+    Image = pytest.importorskip("PIL.Image")
     from inline_core.config import models_dir
     from inline_core.takes import AssetRef
 
