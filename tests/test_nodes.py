@@ -48,6 +48,28 @@ def test_upscale_reports_a_missing_weight_file_clearly() -> None:
         _run(Upscale(), image, model="definitely-not-installed.pth")
 
 
+def test_upscale_runs_the_real_esrgan_when_weights_are_present() -> None:
+    """End-to-end through the node with the actual 4x-UltraSharp weights. Skips where the ML stack or
+    the weight file is absent (e.g. CI), so it only runs where a real upscale can."""
+    pytest.importorskip("torch")
+    from inline_core.config import models_dir
+
+    weights = models_dir() / "upscale_models" / "4x-UltraSharp.pth"
+    if not weights.is_file():
+        pytest.skip(f"{weights} not downloaded")
+
+    ctx = SimpleNamespace(
+        policy=SimpleNamespace(placement=lambda role: SimpleNamespace(device="cpu")),
+        takes=None,
+        run_id="test",
+    )
+    image = (np.random.rand(24, 32, 3) * 255).astype(np.uint8)
+    out = np.asarray(Upscale().run(_node(scale=4), {"image": [image]}, ctx).outputs["image"])
+
+    assert out.shape == (24 * 4, 32 * 4, 3)
+    assert out.dtype == np.uint8
+
+
 def test_the_entry_point_registers_exactly_what_the_manifest_declares() -> None:
     import json
     from pathlib import Path

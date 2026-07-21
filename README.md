@@ -24,7 +24,8 @@ inline-extension.json          the manifest (identity, nodes, dependencies, mode
 python/inline_ext_demo/        your code - the package name is mandatory (see below)
   __init__.py                  the single register() entry point
   basic.py                     nodes with no extra dependencies
-  upscale.py                   a node that needs a weight file
+  upscale.py                   a node that needs a weight file (real ESRGAN upscaling)
+  esrgan.py                    the torch model, imported lazily so upscale.py stays import-light
 tests/test_nodes.py            plain pytest
 ```
 
@@ -120,9 +121,9 @@ progress, and the `options_from` dropdown all work with no code:
 ```json
 "nodes": [
   { "type": "demo/upscale", "models": [
-  { "id": "realesrgan-x4", "label": "Real-ESRGAN x4", "category": "upscale_models",
-    "repo": "ai-forever/Real-ESRGAN", "repoFile": "RealESRGAN_x4.pth",
-      "filename": "RealESRGAN_x4.pth", "approxBytes": 67040989 } ] }
+  { "id": "4x-ultrasharp", "label": "4x UltraSharp", "category": "upscale_models",
+    "repo": "lokCX/4x-Ultrasharp", "repoFile": "4x-UltraSharp.pth",
+      "filename": "4x-UltraSharp.pth", "approxBytes": 66961958 } ] }
 ]
 ```
 

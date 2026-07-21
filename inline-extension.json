@@ -2,7 +2,7 @@
   "schema": 1,
   "id": "demo",
   "name": "Inline Demo Extension",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A reference extension: a generating node plus three image nodes.",
   "author": "Inline Studio",
   "homepage": "https://github.com/inlineresearch/Inline-Studio-Extension-Guide",
@@ -27,13 +27,13 @@
       "defaultEnabled": false,
       "models": [
         {
-          "id": "realesrgan-x4",
-          "label": "Real-ESRGAN x4",
+          "id": "4x-ultrasharp",
+          "label": "4x UltraSharp",
           "category": "upscale_models",
-          "repo": "ai-forever/Real-ESRGAN",
-          "repoFile": "RealESRGAN_x4.pth",
-          "filename": "RealESRGAN_x4.pth",
-          "approxBytes": 67040989
+          "repo": "lokCX/4x-Ultrasharp",
+          "repoFile": "4x-UltraSharp.pth",
+          "filename": "4x-UltraSharp.pth",
+          "approxBytes": 66961958
         }
       ]
     }
