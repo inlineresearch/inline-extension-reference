@@ -13,7 +13,7 @@ from inline_ext_demo.upscale import Upscale
 
 
 def _node(**params: Any) -> Any:
-    return SimpleNamespace(params=params)
+    return SimpleNamespace(id="n1", params=params)
 
 
 def _run(runner: Any, image: np.ndarray, **params: Any) -> np.ndarray:
@@ -77,11 +77,13 @@ def test_upscale_runs_the_real_esrgan_from_an_asset_ref() -> None:
 
     import tempfile
 
+    events: list[Any] = []
     with tempfile.TemporaryDirectory() as tmp:
         src = f"{tmp}/in.png"
         Image.fromarray((np.random.rand(24, 32, 3) * 255).astype(np.uint8)).save(src)
         ctx = SimpleNamespace(
             policy=SimpleNamespace(placement=lambda role: SimpleNamespace(device="cpu")),
+            emitter=SimpleNamespace(emit=events.append),
             takes=None,
             run_id="test",
         )
@@ -90,6 +92,9 @@ def test_upscale_runs_the_real_esrgan_from_an_asset_ref() -> None:
 
     assert out.shape == (24 * 4, 32 * 4, 3)
     assert out.dtype == np.uint8
+    # The node streams progress: a load, at least one tile, and a save.
+    phases = [e.phase.value for e in events]
+    assert "loading" in phases and "sample" in phases and "save" in phases
 
 
 def test_upscale_errors_clearly_when_no_image_is_connected() -> None:

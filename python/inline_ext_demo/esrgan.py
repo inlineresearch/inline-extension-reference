@@ -8,6 +8,7 @@ loads directly with ``strict=True``.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 
 import numpy as np
@@ -102,12 +103,19 @@ def load(path: Path, device: torch.device) -> RRDBNet:
     return model.train(False).to(device)
 
 
-def upscale(model: RRDBNet, image: np.ndarray, device: torch.device, scale: int) -> np.ndarray:
-    """Upscale an HWC image array to ``scale``× its size and return HWC uint8 RGB."""
+def upscale(
+    model: RRDBNet,
+    image: np.ndarray,
+    device: torch.device,
+    scale: int,
+    on_tile: Callable[[int, int], None] | None = None,
+) -> np.ndarray:
+    """Upscale an HWC image array to ``scale``× its size and return HWC uint8 RGB. ``on_tile`` is
+    called ``(done, total)`` after each tile so a caller can report progress."""
     rgb = _to_float_rgb(image)
     x = torch.from_numpy(rgb).permute(2, 0, 1).unsqueeze(0).to(device)
     with torch.no_grad():
-        out = _tiled(model, x)
+        out = _tiled(model, x, on_tile=on_tile)
         if scale != NATIVE_SCALE:
             out = F.interpolate(out, scale_factor=scale / NATIVE_SCALE, mode="bicubic")
     out = out.clamp(0.0, 1.0).squeeze(0).permute(1, 2, 0).cpu().numpy()
@@ -124,19 +132,34 @@ def _to_float_rgb(image: np.ndarray) -> np.ndarray:
     return np.clip(arr / 255.0 if arr.max() > 1.0 else arr, 0.0, 1.0)
 
 
-def _tiled(model: RRDBNet, x: torch.Tensor, tile: int = 512, overlap: int = 32) -> torch.Tensor:
+def _tiled(
+    model: RRDBNet,
+    x: torch.Tensor,
+    tile: int = 512,
+    overlap: int = 32,
+    on_tile: Callable[[int, int], None] | None = None,
+) -> torch.Tensor:
     """Run the model tile-by-tile so a large frame can't OOM the GPU. Overlapping tiles are averaged
     into the output, which removes the seams a hard split would leave."""
     _, _, h, w = x.shape
     if h <= tile and w <= tile:
-        return model(x)
+        out = model(x)
+        if on_tile is not None:
+            on_tile(1, 1)
+        return out
     s, step = NATIVE_SCALE, tile - overlap
+    ys = list(range(0, max(h - overlap, 1), step))
+    xs = list(range(0, max(w - overlap, 1), step))
+    total, done = len(ys) * len(xs), 0
     out = x.new_zeros(x.shape[0], x.shape[1], h * s, w * s)
     weight = torch.zeros_like(out)
-    for y0 in range(0, max(h - overlap, 1), step):
-        for x0 in range(0, max(w - overlap, 1), step):
+    for y0 in ys:
+        for x0 in xs:
             y1, x1 = min(y0 + tile, h), min(x0 + tile, w)
             sr = model(x[:, :, y0:y1, x0:x1])
             out[:, :, y0 * s : y1 * s, x0 * s : x1 * s] += sr
             weight[:, :, y0 * s : y1 * s, x0 * s : x1 * s] += 1.0
+            done += 1
+            if on_tile is not None:
+                on_tile(done, total)
     return out / weight.clamp(min=1.0)

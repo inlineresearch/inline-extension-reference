@@ -8,6 +8,7 @@ ML stack - the node then reports its missing runtime instead of failing to load.
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 import numpy as np
@@ -17,9 +18,23 @@ from inline_core.graph.descriptor import ParamField, Port, Widget
 from inline_core.graph.runners import NodeResult, NodeRunner
 from inline_core.graph.schema import PortKind
 from inline_core.media import MediaKind
+from inline_core.runtime.progress import Phase, ProgressEvent
 from inline_core.takes import AssetRef
 
 WEIGHTS = "4x-UltraSharp.pth"
+log = logging.getLogger("inline_ext_demo.upscale")
+
+
+def _emit(ctx: Any, node: Any, phase: Phase, fraction: float, status: str) -> None:
+    """Stream a progress frame if the context carries an emitter (it always does under a real run;
+    a bare test context may not)."""
+    emitter = getattr(ctx, "emitter", None)
+    if emitter is not None:
+        emitter.emit(
+            ProgressEvent(
+                run_id=ctx.run_id, node_id=node.id, phase=phase, fraction=fraction, status=status
+            )
+        )
 
 
 def _image_array(value: Any) -> np.ndarray:
@@ -80,13 +95,23 @@ class Upscale(NodeRunner):
 
         placement = ctx.policy.placement("vae")
         device = esrgan.torch.device(str(placement.device))
+        scale = int(params["scale"])
+        h, w = image.shape[0], image.shape[1]
+        log.info("demo/upscale: %dx on %s (input %dx%d)", scale, device, w, h)
+
+        _emit(ctx, node, Phase.LOADING, 0.05, f"Loading {weights.name}…")
         key = (str(weights), str(device))
         model = self._cache.get(key)
         if model is None:
             model = self._cache[key] = esrgan.load(weights, device)
 
-        result = esrgan.upscale(model, image, device, scale=int(params["scale"]))
+        def _on_tile(done: int, total: int) -> None:
+            _emit(ctx, node, Phase.SAMPLE, 0.1 + 0.85 * done / total, f"Upscaling… {done}/{total}")
 
+        result = esrgan.upscale(model, image, device, scale=scale, on_tile=_on_tile)
+        log.info("demo/upscale: done -> %dx%d", result.shape[1], result.shape[0])
+
+        _emit(ctx, node, Phase.SAVE, 0.98, "Saving")
         if ctx.takes is None:
             return NodeResult(outputs={"image": result})
         take = ctx.takes.save(ctx.run_id, node.id, result, params)
