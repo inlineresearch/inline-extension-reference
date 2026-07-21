@@ -48,26 +48,53 @@ def test_upscale_reports_a_missing_weight_file_clearly() -> None:
         _run(Upscale(), image, model="definitely-not-installed.pth")
 
 
-def test_upscale_runs_the_real_esrgan_when_weights_are_present() -> None:
-    """End-to-end through the node with the actual 4x-UltraSharp weights. Skips where the ML stack or
-    the weight file is absent (e.g. CI), so it only runs where a real upscale can."""
+def test_upscale_reads_an_image_from_an_asset_ref(tmp_path: Any) -> None:
+    """A wired frame or asset arrives as an AssetRef, not a numpy array - the node must load it. No
+    torch or weights needed, so this runs in CI."""
+    from PIL import Image
+    from inline_core.takes import AssetRef
+    from inline_ext_demo.upscale import _image_array
+
+    path = tmp_path / "in.png"
+    Image.fromarray(np.full((3, 5, 3), 128, np.uint8)).save(path)
+    out = _image_array(AssetRef(ref="path", path=str(path)))
+
+    assert out.shape == (3, 5, 3)
+    np.testing.assert_array_equal(_image_array(np.zeros((2, 2, 3), np.uint8)), 0)
+
+
+def test_upscale_runs_the_real_esrgan_from_an_asset_ref() -> None:
+    """End-to-end through the node the way the canvas drives it: an AssetRef image input and the
+    actual 4x-UltraSharp weights. Skips where the ML stack or the weight file is absent (e.g. CI)."""
     pytest.importorskip("torch")
+    from PIL import Image
     from inline_core.config import models_dir
+    from inline_core.takes import AssetRef
 
     weights = models_dir() / "upscale_models" / "4x-UltraSharp.pth"
     if not weights.is_file():
         pytest.skip(f"{weights} not downloaded")
 
-    ctx = SimpleNamespace(
-        policy=SimpleNamespace(placement=lambda role: SimpleNamespace(device="cpu")),
-        takes=None,
-        run_id="test",
-    )
-    image = (np.random.rand(24, 32, 3) * 255).astype(np.uint8)
-    out = np.asarray(Upscale().run(_node(scale=4), {"image": [image]}, ctx).outputs["image"])
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmp:
+        src = f"{tmp}/in.png"
+        Image.fromarray((np.random.rand(24, 32, 3) * 255).astype(np.uint8)).save(src)
+        ctx = SimpleNamespace(
+            policy=SimpleNamespace(placement=lambda role: SimpleNamespace(device="cpu")),
+            takes=None,
+            run_id="test",
+        )
+        inputs = {"image": [AssetRef(ref="path", path=src)]}
+        out = np.asarray(Upscale().run(_node(scale=4), inputs, ctx).outputs["image"])
 
     assert out.shape == (24 * 4, 32 * 4, 3)
     assert out.dtype == np.uint8
+
+
+def test_upscale_errors_clearly_when_no_image_is_connected() -> None:
+    with pytest.raises(ValueError, match="Connect an image"):
+        Upscale().run(_node(scale=4), {}, SimpleNamespace(takes=None))
 
 
 def test_the_entry_point_registers_exactly_what_the_manifest_declares() -> None:

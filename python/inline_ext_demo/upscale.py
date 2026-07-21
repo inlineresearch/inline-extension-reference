@@ -17,8 +17,22 @@ from inline_core.graph.descriptor import ParamField, Port, Widget
 from inline_core.graph.runners import NodeResult, NodeRunner
 from inline_core.graph.schema import PortKind
 from inline_core.media import MediaKind
+from inline_core.takes import AssetRef
 
 WEIGHTS = "4x-UltraSharp.pth"
+
+
+def _image_array(value: Any) -> np.ndarray:
+    """Materialize an image input to a pixel array. An upstream generating node hands over a numpy
+    array directly; a wired frame or imported asset arrives as an AssetRef pointing at a file - the
+    same shape Core's own img2img input takes."""
+    if isinstance(value, AssetRef):
+        if value.ref == "path" and value.path:
+            from PIL import Image
+
+            return np.asarray(Image.open(value.path).convert("RGB"))
+        raise ValueError("Demo Upscale needs a readable image path input.")
+    return np.asarray(value)
 
 
 @inline_node(
@@ -51,6 +65,11 @@ class Upscale(NodeRunner):
 
     def run(self, node: Any, inputs: dict[str, list[Any]], ctx: Any) -> NodeResult:
         params = {**Upscale.__inline_descriptor__.defaults(), **node.params}
+        sources = inputs.get("image") or []
+        if not sources:
+            raise ValueError("Connect an image into Demo Upscale before running.")
+        image = _image_array(sources[0])
+
         weights = models_dir() / "upscale_models" / str(params["model"] or WEIGHTS)
         if not weights.is_file():
             raise FileNotFoundError(
@@ -66,7 +85,6 @@ class Upscale(NodeRunner):
         if model is None:
             model = self._cache[key] = esrgan.load(weights, device)
 
-        image = np.asarray(inputs["image"][0])
         result = esrgan.upscale(model, image, device, scale=int(params["scale"]))
 
         if ctx.takes is None:
