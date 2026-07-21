@@ -13,6 +13,7 @@ from typing import Any
 
 import numpy as np
 from inline_core.config import models_dir
+from inline_core.errors import CancelledError
 from inline_core.extensions.api import inline_node
 from inline_core.graph.descriptor import ParamField, Port, Widget
 from inline_core.graph.runners import NodeResult, NodeRunner
@@ -35,6 +36,15 @@ def _emit(ctx: Any, node: Any, phase: Phase, fraction: float, status: str) -> No
                 run_id=ctx.run_id, node_id=node.id, phase=phase, fraction=fraction, status=status
             )
         )
+
+
+def _raise_if_cancelled(ctx: Any) -> None:
+    """Cooperative-cancellation checkpoint: the executor only checks between nodes, so a long single
+    node (this one) must bail itself when Stop is pressed. Raising CancelledError yields a clean
+    cancel, not an error."""
+    cancel = getattr(ctx, "cancel", None)
+    if cancel is not None and cancel.cancelled:
+        raise CancelledError("Run cancelled.")
 
 
 def _image_array(value: Any) -> np.ndarray:
@@ -79,6 +89,7 @@ class Upscale(NodeRunner):
         self._cache: dict[tuple[str, str], Any] = {}
 
     def run(self, node: Any, inputs: dict[str, list[Any]], ctx: Any) -> NodeResult:
+        _raise_if_cancelled(ctx)  # bail before any work if Stop was already pressed
         params = {**Upscale.__inline_descriptor__.defaults(), **node.params}
         sources = inputs.get("image") or []
         if not sources:
@@ -106,6 +117,7 @@ class Upscale(NodeRunner):
             model = self._cache[key] = esrgan.load(weights, device)
 
         def _on_tile(done: int, total: int) -> None:
+            _raise_if_cancelled(ctx)  # interrupt between tiles
             _emit(ctx, node, Phase.SAMPLE, 0.1 + 0.85 * done / total, f"Upscaling… {done}/{total}")
 
         result = esrgan.upscale(model, image, device, scale=scale, on_tile=_on_tile)

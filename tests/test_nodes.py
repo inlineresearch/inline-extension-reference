@@ -102,6 +102,18 @@ def test_upscale_errors_clearly_when_no_image_is_connected() -> None:
         Upscale().run(_node(scale=4), {}, SimpleNamespace(takes=None))
 
 
+def test_upscale_is_cancellable() -> None:
+    """Stop must interrupt the node (the executor only checks between nodes, so a long single node
+    has to bail itself). A cancelled context raises CancelledError - a clean cancel, not an error -
+    before any heavy work, so this runs without torch."""
+    from inline_core.errors import CancelledError
+
+    ctx = SimpleNamespace(cancel=SimpleNamespace(cancelled=True), takes=None)
+    image = np.zeros((2, 2, 3), dtype=np.uint8)
+    with pytest.raises(CancelledError):
+        Upscale().run(_node(scale=4), {"image": [image]}, ctx)
+
+
 def test_the_entry_point_registers_exactly_what_the_manifest_declares() -> None:
     import json
     from pathlib import Path
